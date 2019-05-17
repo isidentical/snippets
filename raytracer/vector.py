@@ -51,7 +51,7 @@ class Vector:
         return sum(vars(self * other).values())
     
     def normalize(self):
-        return self // self.length()
+        return self / self.length()
     
     def look_at(self, other):
         tmp = self.__class__(0, 0, 1)

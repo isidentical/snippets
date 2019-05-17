@@ -54,4 +54,6 @@ def load_stl(path):
         
 
 if __name__ == '__main__':
-    load_stl('40mmcube.stl')
+    from pprint import pprint
+    file = load_stl('40mmcube.stl')
+    pprint(file.triangles)
