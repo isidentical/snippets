@@ -11,6 +11,10 @@ class Vector:
     y: int
     z: int
 
+    @classmethod
+    def from_scalar(cls, scalar):
+        return cls(*repeat(scalar, 3))
+
     def __math__(self, other, op):
         if not isinstance(other, self.__class__):
             other = self.__class__(*repeat(other, 3))
