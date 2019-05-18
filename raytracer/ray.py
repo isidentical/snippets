@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from vector import Vector
 
 EPSILON = 1e-07
-
+ZERO_VECTOR = field(default_factory = lambda: Vector.from_scalar(0))
 
 @dataclass
 class Ray:
@@ -10,26 +10,27 @@ class Ray:
     direction: Vector
 
     def intersects_triangle(self, triangle, hit):
-        vertex0, vertex1, vertext2 = triangle.points
+        print(self.direction, self.origin)
+        vertex0, vertex1, vertex2 = triangle.points
 
         edge1 = vertex1 - vertex0
         edge2 = vertex2 - vertex0
 
         h = self.direction.cross_prod(edge2)
         a = edge1.dot_prod(h)
-
+        
         if EPSILON > a > -EPSILON:
             return False
 
         f = 1.0 / a
         s = self.origin - vertex0
         u = f * s.dot_prod(h)
-
+        
         if u < 0 or u > 1:
             return False
 
         q = s.cross_prod(edge1)
-        v = f * ray.direction.dot_prod(q)
+        v = f * self.direction.dot_prod(q)
         if v < 0 or u + v > 1:
             return False
 
@@ -60,5 +61,5 @@ class Ray:
 
 @dataclass
 class Hit:
-    intersect_point: Vector
-    normal: Vector
+    intersect_point: Vector = ZERO_VECTOR
+    normal: Vector = ZERO_VECTOR

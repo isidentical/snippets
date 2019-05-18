@@ -3,6 +3,7 @@ from vector import Vector
 from matrix import Matrix
 from dataclasses import dataclass, field
 from math import tan, pi
+from ray import Ray, Hit
 
 @dataclass
 class Job:
@@ -16,6 +17,15 @@ class Job:
     obj: STLObject
     cammatrix: Matrix
 
+def facing_ratio_shader(px, py, ray_dir, job):
+    origin = Vector(*job.cammatrix[3][:3])
+    cam_ray = Ray(origin, ray_dir)
+    
+    hit = Hit()
+    if cam_ray.intersects_object(job.obj, hit):
+        print(1)
+        job.framebuffer[px][py] * 5
+
 def render(job):
     inv_width = 1 / job.framew
     inv_height = 1 / job.frameh
@@ -24,11 +34,11 @@ def render(job):
     aspectratio = job.framew / job.frameh
     angle = tan(pi * fov * 0.5 / 180.0)
     
-    for y in range(job.height):
+    for y in range(int(job.height)):
         for x in range(job.width):
-            cam_forward = Vector(*job.cammatrix[1])
-            u = Vector(*job.cammatrix[0])
-            v = Vector(*job.cammatrix[2])
+            cam_forward = Vector(*job.cammatrix[1][:3])
+            u = Vector(*job.cammatrix[0][:3])
+            v = Vector(*job.cammatrix[2][:3])
             w = cam_forward * -1
             
             xx = (2 * ((x + 0.5) * inv_width) - 1)/2 * angle * aspectratio
@@ -46,7 +56,7 @@ def render(job):
 def main(file):
     stl = load_stl(file)
     
-    framew, frameh = 1024, 1024
+    framew, frameh = 16, 16
     cammatrix = Vector(100, 100, 150).look_at(Vector(0, 0, 0))    
     obj = STLObject(Vector(0, 0, 0), stl, Vector(255, 255, 255))
     framebuffer = Matrix(frameh, framew, fill_with = (Vector, 0, 0, 0))
@@ -65,8 +75,15 @@ def main(file):
             obj = obj,
             cammatrix = cammatrix            
         )
+        
+        render(job)
+    
+    return job
     
     
     
 if __name__ == '__main__':
-    main('40mmcube.stl')
+    job = main('40mmcube.stl')
+    for y in range(int(job.frameh)):
+        for x in range(job.framew):
+            pass

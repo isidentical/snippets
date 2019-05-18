@@ -11,6 +11,11 @@ class Vector:
     y: int
     z: int
 
+    def __post_init__(self):
+        for attr, value in vars(self).items():
+            if isinstance(value, tuple):
+                setattr(self, attr, value[0])
+
     @classmethod
     def from_scalar(cls, scalar):
         return cls(*repeat(scalar, 3))
