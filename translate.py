@@ -44,7 +44,7 @@ if __name__ == "__main__":
     from textwrap import dedent
 
     code = dedent(
-        """
+    """
     a = "abc"
     b = f"abc"
     c = r"abc"
