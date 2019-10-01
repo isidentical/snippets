@@ -28,11 +28,11 @@ sys.settrace(incrementor)
 
 
 def test():
-    print(1, end=" ")
+    print(1, end=",")
     goto(3)
-    print(3, end=" ")
+    print(3, end=",")
     goto(3)
-    print(2, end=" ")
+    print(2, end=",")
     goto(-3)
     print(4)
 
