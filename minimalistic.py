@@ -2,7 +2,7 @@ import ast
 from dis import Bytecode
 from queue import SimpleQueue
 from io import StringIO
-from logging import getLogger
+from logging import getLogger as logger
 from types import CodeType
 
 CODE_FIELDS = (
@@ -53,7 +53,7 @@ class Compiler(ast.NodeVisitor):
 class VM:
     def __init__(self):
         self._stack = SimpleQueue()
-        self._logger = getLogger()
+        self._logger = logger()
 
     def run(self, code):
         buf = Bytecode(code)
