@@ -10,7 +10,7 @@ BASE = "https://buildbot.python.org/all/api/v2"
 CONFIG_PATH = Path("~/.buildbots.json").expanduser()
 STATE_REPR = {
     0: "✔",
-    1: "❗",
+    1: "⚠️",
     2: "❌",
 }
 
@@ -49,6 +49,7 @@ def read_config():
 def main():
     parser = ArgumentParser()
     parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--force", action="store_true")
     parser.add_argument("--refresh-ids", action="store_true")
     options = parser.parse_args()
 
@@ -57,11 +58,11 @@ def main():
 
     config = read_config()
 
-    if CONFIG_PATH.stat().st_mtime + 60 * 60 * 3 < time.time():
+    if options.force or CONFIG_PATH.stat().st_mtime + 60 * 60 * 24 < time.time():
         states = defaultdict(list)
         for builder in config["builders"]:
             for build in get_builds(
-                builderid=builder["id"], limit=options.limit
+                builderid=builder["id"], limit=options.limit, order="-started_at"
             ):
                 states[builder["name"]].append(
                     STATE_REPR.get(build["results"], "🔵")
@@ -70,7 +71,7 @@ def main():
         dump_config(config)
 
     for builder, builds in config["states"].items():
-        print(builder, "===>", builds)
+        print(builder, "===>", " ".join(builds))
 
 
 if __name__ == "__main__":
