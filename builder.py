@@ -177,6 +177,80 @@ def setup_git(options, cache):
         for file in ("t.*", "t1.*"):
             ignore_f.write(file + "\n")
 
+def install_firefox(options, cache):
+    @as_user
+    def configure_firefox(options, cache):
+        firefox_base = Path("~/.mozilla/firefox/").expanduser()
+        settings = {
+            "browser.urlbar.placeholderName": "Google"
+        }
+        for preference_file in firefox_base.glob("**/prefs.js"):
+            contents = preference_file.read_text().splitlines()
+            for line_no, line in enumerate(contents.copy()):
+                for key, value in settings.items():
+                    if key in line:
+                        contents[line_no] = f"user_pref(\"{key}\", \"{value}\");"
+            preference_file.write_text("\n".join(contents) + "\n")
+
+    add_repo(cache, "ppa:ubuntu-mozilla-daily/firefox-aurora")
+    install(cache, "firefox")
+    configure_firefox(options, cache)
+
+@as_user
+def install_geany_extras(options, cache):
+    geany_base = Path("~/.config/geany/").expanduser()
+    geany_schemes = geany_base / "colorschemes"
+    if geany_schemes.exists():
+        shutil.rmtree(geany_schemes)
+    
+    with tempfile.TemporaryDirectory() as directory:
+        directory = Path(directory)
+        subprocess.check_call(
+            ["git", "clone", "https://github.com/geany/geany-themes", directory]
+        )
+        shutil.move(os.fspath(directory / "colorschemes"), geany_schemes)
+
+    parser = ConfigParser()
+    geany_conf = geany_base / "geany.config"
+    if geany_conf.exists():
+        parser.read(geany_conf)
+
+    if "geany" not in parser.sections():
+        parser.add_section("geany")
+
+    parser["geany"]["indent_type"] = "0"
+    parser["geany"]["pref_template_mail"] = "isidentical@gmail.com"
+    with geany_conf.open("w") as conf_f:
+        parser.write(conf_f)
+
+def install_node_starter(options, cache):
+    with tempfile.NamedTemporaryFile() as temp_file:
+        file_name = temp_file.name 
+        urllib.request.urlretrieve("https://deb.nodesource.com/setup_14.x", filename = file_name)
+        subprocess.check_call(["bash", file_name])
+    install(cache, "nodejs")
+
+def install_utilities(options, cache):
+    add_repo(cache, "ppa:atareao/telegram")
+    
+    install(cache, "telegram")
+    install(cache, "vim-gtk3", "jq", "gdebi-core", "wget")
+    with tempfile.NamedTemporaryFile() as temp_file:
+        file_name = temp_file.name
+        subprocess.check_call(["wget", "-O", file_name, "https://discordapp.com/api/download?platform=linux&format=deb"])
+        subprocess.check_call(["gdebi", "-n", file_name])
+    snap_install("--beta", "authy")
+
+def install_docker(options, cache):
+    with tempfile.NamedTemporaryFile() as temp_file:
+        file_name = temp_file.name 
+        urllib.request.urlretrieve("https://download.docker.com/linux/ubuntu/gpg", filename = file_name)
+        subprocess.check_call(["apt-key", "add", file_name])
+
+    ubuntu_version = subprocess.check_output(["lsb_release", "-cs"]).decode().strip()
+    add_repo(cache, f"deb [arch=amd64] https://download.docker.com/linux/ubuntu {ubuntu_version} stable")
+    install(cache, "docker-ce", "docker-ce-cli", "containerd.io", "docker-compose")
+
 def build(options):
     cache = apt.Cache()
     with BuildCache() as build_cache:
@@ -184,6 +258,11 @@ def build(options):
             setup_sys,
             setup_ssh,
             setup_git,
+            install_docker,
+            install_firefox,
+            install_utilities,
+            install_node_starter,
+            install_geany_extras,
         ]:
             if build_cache.is_cached(proxy):
                 continue
