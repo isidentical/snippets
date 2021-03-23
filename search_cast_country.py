@@ -44,7 +44,7 @@ def _imdb_search_country_in_cast(movie_id, search_text):
         cast_futures = {executor.submit(get_birth_place, cast): cast for cast in cast}
         for progress, future in enumerate(as_completed(cast_futures.keys())):
             if progress % 20 == 0:
-                print(f"Progress: {progress}/{len(cast)}")
+                print(f"Progress: {progress}/{len(cast)}", end="\r")
 
             actor, birth_place = cast_futures[future], future.result()
             if search_text in birth_place.casefold():
