@@ -4,7 +4,7 @@ from argparse import ArgumentParser
 from collections import defaultdict
 from pathlib import Path
 from urllib.parse import urlencode
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 BASE = "https://buildbot.python.org/all/api/v2"
 CONFIG_PATH = Path("~/.buildbots.json").expanduser()
@@ -58,11 +58,16 @@ def main():
 
     config = read_config()
 
-    if options.force or CONFIG_PATH.stat().st_mtime + 60 * 60 * 24 < time.time():
+    if (
+        options.force
+        or CONFIG_PATH.stat().st_mtime + 60 * 60 * 24 < time.time()
+    ):
         states = defaultdict(list)
         for builder in config["builders"]:
             for build in get_builds(
-                builderid=builder["id"], limit=options.limit, order="-started_at"
+                builderid=builder["id"],
+                limit=options.limit,
+                order="-started_at",
             ):
                 states[builder["name"]].append(
                     STATE_REPR.get(build["results"], "🔵")

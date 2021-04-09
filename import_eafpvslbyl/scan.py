@@ -18,7 +18,10 @@ class ExtendedVisitor(ast.NodeVisitor):
 class ImportEAFP(ExtendedVisitor):
     def visit_Try(self, node):
         for handler in node.handlers:
-            if isinstance(handler.type, ast.Name) and handler.type.id == "ImportError":
+            if (
+                isinstance(handler.type, ast.Name)
+                and handler.type.id == "ImportError"
+            ):
                 self.logs.append(f"{self.filename}:{node.lineno}")
                 self.count += 1
                 break
@@ -28,7 +31,9 @@ class ImportEAFP(ExtendedVisitor):
 
 class ImportLBYL(ExtendedVisitor):
     def visit_Call(self, node):
-        if not (isinstance(node.func, ast.Name) and node.func.id == "find_spec"):
+        if not (
+            isinstance(node.func, ast.Name) and node.func.id == "find_spec"
+        ):
             return self.generic_visit(node)
 
         self.logs.append(f"{self.filename}:{node.lineno}")
@@ -69,7 +74,10 @@ if __name__ == "__main__":
         visitor = Visitor()
         visit_py_files(path, visitor)
         with open(
-            os.path.join(os.path.dirname(__file__), visitor.__class__.__name__), "w"
+            os.path.join(
+                os.path.dirname(__file__), visitor.__class__.__name__
+            ),
+            "w",
         ) as f:
             f.write(f"Total Matches: {visitor.count}\n\n")
             for line in visitor.logs:

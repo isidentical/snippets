@@ -1,4 +1,5 @@
 import ast
+
 try:
     import parso
 
@@ -6,4 +7,7 @@ try:
         grammar = parso.load_grammar(version=version)
         tree = grammar.parse(code)
         return list(grammar.iter_errors(tree))
-except ImportError: ...
+
+
+except ImportError:
+    ...

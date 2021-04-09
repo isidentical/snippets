@@ -21,9 +21,13 @@ class Translator:
             ):
                 next_token = tokens[index + 1]
                 newsrc = token.string + next_token.string
-                newstart = next_token.start[0], next_token.start[1] - len(token.string)
+                newstart = next_token.start[0], next_token.start[1] - len(
+                    token.string
+                )
                 new_tokens.pop(index + offset)
-                new_tokens[index] = tokenize.TokenInfo(3, newsrc, newstart, next_token.end, next_token.line)
+                new_tokens[index] = tokenize.TokenInfo(
+                    3, newsrc, newstart, next_token.end, next_token.line
+                )
                 offset -= 1
 
         for token in new_tokens:
@@ -44,7 +48,7 @@ if __name__ == "__main__":
     from textwrap import dedent
 
     code = dedent(
-    """
+        """
     a = "abc"
     b = f"abc"
     c = r"abc"

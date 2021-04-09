@@ -108,21 +108,31 @@ def login(request):
         )
 
     access_token = access_token["access_token"]
-    user = send_github_request("https://api.github.com/user", access_token=access_token)
+    user = send_github_request(
+        "https://api.github.com/user", access_token=access_token
+    )
     repos = send_github_request(user["repos_url"], access_token=access_token)
-    list_template = "\n".join(get_template("list").substitute(**repo) for repo in repos)
+    list_template = "\n".join(
+        get_template("list").substitute(**repo) for repo in repos
+    )
 
     template = get_template("final")
     content = template.substitute(
-        avatar_url=user["avatar_url"], name=user["login"], list_template=list_template
+        avatar_url=user["avatar_url"],
+        name=user["login"],
+        list_template=list_template,
     )
     return request.send_html_response(HTTPStatus.OK, content)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-H", "--host", help="Server host", default="0.0.0.0", type=str)
-    parser.add_argument("-P", "--port", help="Server port", default=8000, type=int)
+    parser.add_argument(
+        "-H", "--host", help="Server host", default="0.0.0.0", type=str
+    )
+    parser.add_argument(
+        "-P", "--port", help="Server port", default=8000, type=int
+    )
 
     args = parser.parse_args()
     connection = (args.host, args.port)

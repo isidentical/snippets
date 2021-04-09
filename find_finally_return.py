@@ -3,8 +3,9 @@ import itertools
 import os
 from contextlib import suppress
 from multiprocessing import Process
-from tokenize import open as fopen
 from pathlib import Path
+from tokenize import open as fopen
+
 
 class ExtendedVisitor(ast.NodeVisitor):
     def __init__(self, filename=None, *args, **kwargs):
@@ -20,11 +21,16 @@ class FinallyHandler(ExtendedVisitor):
         if node.finalbody:
             for subnode in node.finalbody:
                 for subbernode in ast.walk(subnode):
-                    if isinstance(subbernode, (ast.Break, ast.Continue, ast.Return)):
+                    if isinstance(
+                        subbernode, (ast.Break, ast.Continue, ast.Return)
+                    ):
                         self.count += 1
-                        self.logs.append(f"{self.filename}:{subbernode.lineno}")
-                    
+                        self.logs.append(
+                            f"{self.filename}:{subbernode.lineno}"
+                        )
+
         return self.generic_visit(node)
+
 
 def visit_py_files(src, visitor):
     for file in Path(src).glob("**/*.py"):

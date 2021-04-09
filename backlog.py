@@ -12,9 +12,7 @@ def initalize_if_needed(db):
 
 
 def backlog(command="list", parameter=None):
-    with shelve.open(
-        os.fspath(DB_PATH / "backlog.db"), writeback=True
-    ) as db:
+    with shelve.open(os.fspath(DB_PATH / "backlog.db"), writeback=True) as db:
         initalize_if_needed(db)
 
         if command == "peek":

@@ -1,9 +1,10 @@
+import ast
+import tokenize
 import traceback
 import warnings
-from pprint import pprint
-import ast, tokenize
-from pathlib import Path
 from collections import Counter, defaultdict
+from pathlib import Path
+from pprint import pprint
 
 MODULES = """\
 __future__
@@ -895,14 +896,17 @@ zoneinfo._zoneinfo"""
 
 MODULES = frozenset(MODULES.splitlines())
 
+
 def change_context(func):
     def inner(self, node):
         self._enter_ctx(node)
         ret = self.generic_visit(node)
         self._exit_ctx()
         return ret
+
     return inner
-    
+
+
 def process_package(directory):
     number = Counter()
     for file in directory.glob("**/*.py"):
@@ -911,11 +915,18 @@ def process_package(directory):
                 tree = ast.parse(stream.read())
         except:
             continue
-        for call in filter(lambda node: isinstance(node, ast.Call), ast.walk(tree)):
-            if type(call.func) is ast.Attribute and type(call.func.value) is ast.Name and call.func.value.id in MODULES:
+        for call in filter(
+            lambda node: isinstance(node, ast.Call), ast.walk(tree)
+        ):
+            if (
+                type(call.func) is ast.Attribute
+                and type(call.func.value) is ast.Name
+                and call.func.value.id in MODULES
+            ):
                 number[call.func.value.id + call.func.attr] += 1
 
     return number
+
 
 def process_packages(directory):
     number = Counter()
@@ -923,8 +934,9 @@ def process_packages(directory):
         if package.is_dir():
             number.update(process_package(package))
         if index % 50 == 0:
-            print(', '.join(f'{k} ({v})' for k, v in number.most_common(10)))
+            print(", ".join(f"{k} ({v})" for k, v in number.most_common(10)))
     return number
+
 
 results = process_packages(Path("disk/rawdata/clean/"))
 with open("func_res", "w") as f:
