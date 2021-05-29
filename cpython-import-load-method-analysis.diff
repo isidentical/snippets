@@ -1,0 +1,122 @@
+commit f8f8fcee4d1480970c356eec0f23c326b9fe674d
+Author: Batuhan Taskaya <batuhan@python.org>
+Date:   Sat May 29 17:06:47 2021 +0300
+
+    tmp: LOAD_METHOD/CALL_METHOD analysis
+
+diff --git a/Include/internal/pycore_symtable.h b/Include/internal/pycore_symtable.h
+index f3505f8949..457deff5c2 100644
+--- a/Include/internal/pycore_symtable.h
++++ b/Include/internal/pycore_symtable.h
+@@ -94,6 +94,7 @@ extern void _PySymtable_Free(struct symtable *);
+ #define DEF_IMPORT 2<<6        /* assignment occurred via import */
+ #define DEF_ANNOT 2<<7         /* this name is annotated */
+ #define DEF_COMP_ITER 2<<8     /* this name is a comprehension iteration variable */
++#define DEF_IMPORT_MOD 2<<9    /* name belongs to an imported module */
+ 
+ #define DEF_BOUND (DEF_LOCAL | DEF_PARAM | DEF_IMPORT)
+ 
+diff --git a/Python/compile.c b/Python/compile.c
+index 2cbe1eca5a..42224b64f1 100644
+--- a/Python/compile.c
++++ b/Python/compile.c
+@@ -4259,6 +4259,25 @@ check_index(struct compiler *c, expr_ty e, expr_ty s)
+     }
+ }
+ 
++static int
++is_imported_module(struct compiler *c, expr_ty e)
++{
++    if (e->kind != Name_kind) {
++        return 0;
++    }
++
++    PyObject *symbol = PyDict_GetItem(
++        c->c_st->st_top->ste_symbols,
++        e->v.Name.id
++    );
++    long flags = PyLong_AS_LONG(symbol);
++    if (flags == -1) {
++        PyErr_Clear();
++        return 0;
++    }
++    return flags & DEF_IMPORT_MOD;
++}
++
+ // Return 1 if the method call was optimized, -1 if not, and 0 on error.
+ static int
+ maybe_optimize_method_call(struct compiler *c, expr_ty e)
+@@ -4272,6 +4291,11 @@ maybe_optimize_method_call(struct compiler *c, expr_ty e)
+     if (meth->kind != Attribute_kind || meth->v.Attribute.ctx != Load) {
+         return -1;
+     }
++
++    if (is_imported_module(c, meth->v.Attribute.value)) {
++        return -1;
++    }
++
+     /* Check that there aren't too many arguments */
+     argsl = asdl_seq_LEN(args);
+     kwdsl = asdl_seq_LEN(kwds);
+diff --git a/Python/symtable.c b/Python/symtable.c
+index 62bd1e2ec4..86ccc0003d 100644
+--- a/Python/symtable.c
++++ b/Python/symtable.c
+@@ -209,7 +209,7 @@ static int symtable_visit_setcomp(struct symtable *st, expr_ty s);
+ static int symtable_visit_dictcomp(struct symtable *st, expr_ty s);
+ static int symtable_visit_arguments(struct symtable *st, arguments_ty);
+ static int symtable_visit_excepthandler(struct symtable *st, excepthandler_ty);
+-static int symtable_visit_alias(struct symtable *st, alias_ty);
++static int symtable_visit_alias(struct symtable *st, alias_ty, long flags);
+ static int symtable_visit_comprehension(struct symtable *st, comprehension_ty);
+ static int symtable_visit_keyword(struct symtable *st, keyword_ty);
+ static int symtable_visit_params(struct symtable *st, asdl_arg_seq *args);
+@@ -1155,6 +1155,17 @@ symtable_add_def(struct symtable *st, PyObject *name, int flag) {
+     } \
+ }
+ 
++#define VISIT_SEQ_FLAGS(ST, TYPE, SEQ, FLAGS) { \
++    int i; \
++    asdl_ ## TYPE ## _seq *seq = (SEQ); /* avoid variable capture */ \
++    for (i = 0; i < asdl_seq_LEN(seq); i++) { \
++        TYPE ## _ty elt = (TYPE ## _ty)asdl_seq_GET(seq, i); \
++        if (!symtable_visit_ ## TYPE((ST), elt, (FLAGS))) \
++            VISIT_QUIT((ST), 0);                 \
++    } \
++}
++
++
+ #define VISIT_SEQ_WITH_NULL(ST, TYPE, SEQ) {     \
+     int i = 0; \
+     asdl_ ## TYPE ## _seq *seq = (SEQ); /* avoid variable capture */ \
+@@ -1344,10 +1355,10 @@ symtable_visit_stmt(struct symtable *st, stmt_ty s)
+             VISIT(st, expr, s->v.Assert.msg);
+         break;
+     case Import_kind:
+-        VISIT_SEQ(st, alias, s->v.Import.names);
++        VISIT_SEQ_FLAGS(st, alias, s->v.Import.names, DEF_IMPORT | DEF_IMPORT_MOD);
+         break;
+     case ImportFrom_kind:
+-        VISIT_SEQ(st, alias, s->v.ImportFrom.names);
++        VISIT_SEQ_FLAGS(st, alias, s->v.ImportFrom.names, DEF_IMPORT);
+         break;
+     case Global_kind: {
+         int i;
+@@ -1934,7 +1945,7 @@ symtable_visit_match_case(struct symtable *st, match_case_ty m)
+ }
+ 
+ static int
+-symtable_visit_alias(struct symtable *st, alias_ty a)
++symtable_visit_alias(struct symtable *st, alias_ty a, long flags)
+ {
+     /* Compute store_name, the name actually bound by the import
+        operation.  It is different than a->name when a->name is a
+@@ -1954,7 +1965,7 @@ symtable_visit_alias(struct symtable *st, alias_ty a)
+         Py_INCREF(store_name);
+     }
+     if (!_PyUnicode_EqualToASCIIString(name, "*")) {
+-        int r = symtable_add_def(st, store_name, DEF_IMPORT);
++        int r = symtable_add_def(st, store_name, flags);
+         Py_DECREF(store_name);
+         return r;
+     }
